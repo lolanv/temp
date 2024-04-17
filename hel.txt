@@ -1,4 +1,4 @@
-classFile
+classFile.h
 __________________________________________________
 
 
@@ -19,12 +19,27 @@ public:
     bool m_is_apple_or_play_available;
     int m_speaker_power_rating;
 
-    MultimediaSystem(std::string reg_id, SystemType type, int speaker_count, bool usb_port, bool android_auto, bool apple_play, int power_rating)
-        : m_system_reg_id(reg_id), m_system_type(type), m_speaker_count(speaker_count), m_is_usb_port_available(usb_port),
-        m_os_android_auto_available(android_auto), m_is_apple_or_play_available(apple_play), m_speaker_power_rating(power_rating) {}
+    MultimediaSystem(std::string reg_id, SystemType type, int speaker_count, bool usb_port, bool android_auto, bool apple_play, int power_rating);
 };
-
 #endif // MULTIMEDIASYSTEM_H
+
+
+
+
+classFile.cpp
+___________________________________________________________________________________
+
+
+#include "MultimediaSystem.h"
+
+MultimediaSystem::MultimediaSystem(std::string reg_id, SystemType type, int speaker_count, bool usb_port, bool android_auto, bool apple_play, int power_rating)
+    : m_system_reg_id(reg_id), m_system_type(type), m_speaker_count(speaker_count), m_is_usb_port_available(usb_port),
+        m_os_android_auto_available(android_auto), m_is_apple_or_play_available(apple_play), m_speaker_power_rating(power_rating) 
+{}
+
+
+
+
 
 
 
@@ -64,28 +79,27 @@ ____________________________________________________________________
 #include <algorithm>
 
 void createObjects(DataContainer& dataContainer) {
-    for (int i = 0; i < 5; ++i) {
-        std::string reg_id = "System" + std::to_string(i + 1);
-        SystemType type = static_cast<SystemType>(i % 3);
-        int speaker_count = (i + 1) * 2;
-        bool usb_port = (i % 2 == 0);
-        bool android_auto = (i % 3 == 0);
-        bool apple_play = (i % 4 == 0);
-        int power_rating = 50 + (i * 10);
-
-        std::shared_ptr<MultimediaSystem> system_ptr = std::make_shared<MultimediaSystem>(reg_id, type, speaker_count, usb_port, android_auto, apple_play, power_rating);
-
-        dataContainer.emplace(reg_id, system_ptr);
-    }
+    dataContainer.emplace("ms101", std::make_shared<MultimediaSystem>("ms101", SystemType::TYPE_A, 4, true, false, false, 40));
+    dataContainer.emplace("ms102", std::make_shared<MultimediaSystem>("ms102", SystemType::TYPE_B, 6, true, false, false, 42));
+    dataContainer.emplace("ms103", std::make_shared<MultimediaSystem>("ms103", SystemType::TYPE_A, 5, false, true, false, 45));
+    dataContainer.emplace("ms104", std::make_shared<MultimediaSystem>("ms104", SystemType::TYPE_A, 4, true, true, true, 58));
+    dataContainer.emplace("ms105", std::make_shared<MultimediaSystem>("ms105", SystemType::TYPE_A, 6, false, false, false, 60));
 }
 
 std::size_t countAndroidAutoInstance(const DataContainer& dataContainer) {
     std::size_t count = 0;
-    for (const auto& [key, system_ptr] : dataContainer) {
-        if (system_ptr->m_os_android_auto_available) {
-            count++;
+
+    count = std::count_if(
+        dataContainer.begin(),
+        dataContainer.end(),
+        [&](const auto& pair) {
+            auto [key, system_ptr] = pair;
+            if (system_ptr->m_os_android_auto_available) {
+                return true;
+            }
+            return false;
         }
-    }
+    );
     return count;
 }
 
@@ -100,25 +114,28 @@ Container matchingInstanceNumbers(const DataContainer& dataContainer, Predicate 
 }
 
 bool allInstanceAboveThreshold(const DataContainer& dataContainer, int threshold) {
-    return std::all_of(dataContainer.begin(), dataContainer.end(), [threshold](const auto& pair) {
-        return pair.second->m_speaker_power_rating > threshold;
-    });
+    return std::all_of(
+        dataContainer.begin(),
+        dataContainer.end(),
+        [&](const auto& pair) {
+            return pair.second->m_speaker_power_rating > threshold;
+        }
+    );
 }
 
 bool instanceAndroidAppleCompatible(const DataContainer& dataContainer) {
-    return std::any_of(dataContainer.begin(), dataContainer.end(), [](const auto& pair) {
-        return pair.second->m_os_android_auto_available && pair.second->m_is_apple_or_play_available;
-    });
+    return std::any_of(
+        dataContainer.begin(),
+        dataContainer.end(),
+        [](const auto& pair) {
+            return pair.second->m_os_android_auto_available && pair.second->m_is_apple_or_play_available;
+        }
+    );
 }
 
 
 
 
-
-
-
-Main.cpp
-________________________________________________________________
 
 #include <iostream>
 #include "functionalities.h"
