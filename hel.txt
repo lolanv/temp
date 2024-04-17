@@ -1,0 +1,159 @@
+classFile
+__________________________________________________
+
+
+#ifndef MULTIMEDIASYSTEM_H
+#define MULTIMEDIASYSTEM_H
+
+#include <string>
+
+enum SystemType { TYPE_A, TYPE_B, TYPE_C };
+
+class MultimediaSystem {
+public:
+    std::string m_system_reg_id;
+    SystemType m_system_type;
+    int m_speaker_count;
+    bool m_is_usb_port_available;
+    bool m_os_android_auto_available;
+    bool m_is_apple_or_play_available;
+    int m_speaker_power_rating;
+
+    MultimediaSystem(std::string reg_id, SystemType type, int speaker_count, bool usb_port, bool android_auto, bool apple_play, int power_rating)
+        : m_system_reg_id(reg_id), m_system_type(type), m_speaker_count(speaker_count), m_is_usb_port_available(usb_port),
+        m_os_android_auto_available(android_auto), m_is_apple_or_play_available(apple_play), m_speaker_power_rating(power_rating) {}
+};
+
+#endif // MULTIMEDIASYSTEM_H
+
+
+
+functionalities.h
+______________________________________________________________________________________________
+
+
+#ifndef FUNCTIONALITIES_H
+#define FUNCTIONALITIES_H
+
+#include "MultimediaSystem.h"
+#include <unordered_map>
+#include<memory>
+#include <vector>
+#include <functional>
+
+using DataContainer = std::unordered_map<std::string, std::shared_ptr<MultimediaSystem>>;
+using Container = std::vector<std::string>;
+using Predicate = std::function<bool(std::shared_ptr<MultimediaSystem>)>;
+
+void createObjects(DataContainer& dataContainer);
+std::size_t countAndroidAutoInstance(const DataContainer& dataContainer);
+Container matchingInstanceNumbers(const DataContainer& dataContainer, Predicate predicate);
+bool allInstanceAboveThreshold(const DataContainer& dataContainer, int threshold);
+bool instanceAndroidAppleCompatible(const DataContainer& dataContainer);
+
+#endif // FUNCTIONALITIES_H
+
+
+
+
+functionalities.cpp
+____________________________________________________________________
+
+
+#include "functionalities.h"
+#include <algorithm>
+
+void createObjects(DataContainer& dataContainer) {
+    for (int i = 0; i < 5; ++i) {
+        std::string reg_id = "System" + std::to_string(i + 1);
+        SystemType type = static_cast<SystemType>(i % 3);
+        int speaker_count = (i + 1) * 2;
+        bool usb_port = (i % 2 == 0);
+        bool android_auto = (i % 3 == 0);
+        bool apple_play = (i % 4 == 0);
+        int power_rating = 50 + (i * 10);
+
+        std::shared_ptr<MultimediaSystem> system_ptr = std::make_shared<MultimediaSystem>(reg_id, type, speaker_count, usb_port, android_auto, apple_play, power_rating);
+
+        dataContainer.emplace(reg_id, system_ptr);
+    }
+}
+
+std::size_t countAndroidAutoInstance(const DataContainer& dataContainer) {
+    std::size_t count = 0;
+    for (const auto& [key, system_ptr] : dataContainer) {
+        if (system_ptr->m_os_android_auto_available) {
+            count++;
+        }
+    }
+    return count;
+}
+
+Container matchingInstanceNumbers(const DataContainer& dataContainer, Predicate predicate) {
+    Container matching_instances;
+    for (const auto& [key, system_ptr] : dataContainer) {
+        if (predicate(system_ptr)) {
+            matching_instances.push_back(system_ptr->m_system_reg_id);
+        }
+    }
+    return matching_instances;
+}
+
+bool allInstanceAboveThreshold(const DataContainer& dataContainer, int threshold) {
+    return std::all_of(dataContainer.begin(), dataContainer.end(), [threshold](const auto& pair) {
+        return pair.second->m_speaker_power_rating > threshold;
+    });
+}
+
+bool instanceAndroidAppleCompatible(const DataContainer& dataContainer) {
+    return std::any_of(dataContainer.begin(), dataContainer.end(), [](const auto& pair) {
+        return pair.second->m_os_android_auto_available && pair.second->m_is_apple_or_play_available;
+    });
+}
+
+
+
+
+
+
+
+Main.cpp
+________________________________________________________________
+
+#include <iostream>
+#include "functionalities.h"
+
+int main() {
+    try {
+        DataContainer dataContainer;
+
+        // Create objects
+        createObjects(dataContainer);
+
+        // Count instances with Android Auto available
+        std::size_t androidAutoCount = countAndroidAutoInstance(dataContainer);
+        std::cout << "Number of instances with Android Auto available: " << androidAutoCount << std::endl;
+
+        // Find instance numbers matching a predicate
+        Container matchingInstances = matchingInstanceNumbers(dataContainer, [](std::shared_ptr<MultimediaSystem> system_ptr) {
+            return system_ptr->m_speaker_count > 4; // Example predicate: Speaker count above 4
+        });
+        std::cout << "Instance numbers with speaker count above 4:";
+        for (const auto& instance : matchingInstances) {
+            std::cout << " " << instance;
+        }
+        std::cout << std::endl;
+
+        // Check if all instances have speaker power rating above a threshold
+        int threshold = 60;
+        bool allAboveThreshold = allInstanceAboveThreshold(dataContainer, threshold);
+        std::cout << "Are all instances above threshold (" << threshold << ")? " << (allAboveThreshold ? "Yes" : "No") << std::endl;
+
+        // Check if at least one instance is Android and Apple compatible
+        bool compatible = instanceAndroidAppleCompatible(dataContainer);
+        std::cout << "Is at least one instance Android and Apple compatible? " << (compatible ? "Yes" : "No") << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "An exception occurred: " << e.what() << std::endl;
+    }
+    return 0;
+}
